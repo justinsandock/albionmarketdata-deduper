@@ -1,0 +1,8 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'build', '-t', 'us.gcr.io/$PROJECT_ID/albiondata/deduper:latest', '.' ]
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [ 'build', '-t', 'us.gcr.io/$PROJECT_ID/albiondata/deduper:$COMMIT_SHA', '.' ]
+images:
+  - 'us.gcr.io/$PROJECT_ID/albiondata/deduper:latest'
+  - 'us.gcr.io/$PROJECT_ID/albiondata/deduper:$COMMIT_SHA'
