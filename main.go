@@ -1,23 +1,18 @@
 package main
 
 import (
-	"crypto/md5"
 	"flag"
 	"fmt"
 	"log"
-	"runtime"
-	"time"
 
 	"github.com/go-redis/redis"
 	"github.com/nats-io/go-nats"
 	"github.com/regner/albiondata-client/lib"
-	"encoding/json"
 )
 
 var (
 	rc        *redis.Client
 	nc        *nats.Conn
-	enc       *nats.EncodedConn
 	cacheTime int
 	natsURL   string
 	redisAddr string
@@ -28,7 +23,7 @@ func init() {
 	flag.StringVar(
 		&natsURL,
 		"n",
-		"nats://ingest.albion-data.com:4222",
+		"nats://localhost:4222",
 		"NATS server to connect to.",
 	)
 
@@ -77,7 +72,7 @@ func main() {
 
 	// Market Orders
 	marketCh := make(chan *nats.Msg, 64)
-	marketSub, err := nc.ChanSubscribe("marketorders.ingest", marketCh)
+	marketSub, err := nc.ChanSubscribe(lib.NatsMarketOrdersIngest, marketCh)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return
@@ -86,7 +81,7 @@ func main() {
 
 	// Gold Prices
 	goldCh := make(chan *nats.Msg, 64)
-	goldSub, err := nc.ChanSubscribe("goldprices.ingest", goldCh)
+	goldSub, err := nc.ChanSubscribe(lib.NatsGoldPricesIngest, goldCh)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return
@@ -100,71 +95,5 @@ func main() {
 		case msg := <-goldCh:
 			handleGold(msg)
 		}
-	}
-
-	runtime.Goexit()
-}
-
-func handleMarketOrder(msg *nats.Msg) {
-	morders := &lib.MarketUpload{}
-	if err := json.Unmarshal(msg.Data, morders); err != nil {
-		fmt.Printf("%v\n", err)
-	}
-
-	for _, order := range morders.Orders {
-		jb, _ := json.Marshal(order)
-		hash := md5.Sum(jb)
-		key := fmt.Sprintf("%v-%v", msg.Subject, hash)
-
-		if !isDupedMessage(key) {
-			log.Print("Publishing deduped market order...")
-			nc.Publish("marketorders.deduped", jb)
-		} else {
-			log.Print("Got a duplicated set of gold prices...")
-		}
-	}
-}
-
-func handleGold(msg *nats.Msg) {
-	hash := md5.Sum(msg.Data)
-	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
-
-	if !isDupedMessage(key) {
-		log.Print("Publishing deduped set of gold prices...")
-		nc.Publish("goldprices.deduped", msg.Data)
-	} else {
-		log.Print("Got a duplicated set of gold prices...")
-	}
-}
-
-func isDupedMessage(key string) bool {
-	_, err := rc.Get(key).Result()
-	if err == redis.Nil {
-		set(key)
-
-		// It didn't exist so not a duped message
-		return false
-	} else if err != nil {
-		fmt.Printf("Error while getting from Redis: %v", err)
-
-		// There was a problem with Redis and since we cannot verify
-		// if the message is a dupe lets just say it isn't. Better
-		// safe than sorry.
-		return false
-	} else {
-		set(key)
-
-		// There was no problem with Redis and we got a value back.
-		// So it was a dupe.
-		return true
-	}
-}
-
-func set(key string) {
-	cache_time := time.Duration(cacheTime) * time.Second
-
-	_, err := rc.Set(key, 1, cache_time).Result()
-	if err != nil {
-		fmt.Printf("Something wrong seting redis key: %v", err)
 	}
 }

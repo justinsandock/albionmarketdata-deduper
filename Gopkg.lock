@@ -4,8 +4,8 @@
 [[projects]]
   name = "github.com/go-redis/redis"
   packages = [".","internal","internal/consistenthash","internal/hashtag","internal/pool","internal/proto"]
-  revision = "89515eebd1b5761486abd32d9e84a8f55dda7740"
-  version = "v6.5.6"
+  revision = "19c1c2272e00c1aaa903cf574c746cd449f9cd3c"
+  version = "v6.5.7"
 
 [[projects]]
   name = "github.com/nats-io/go-nats"
@@ -22,7 +22,7 @@
 [[projects]]
   name = "github.com/regner/albiondata-client"
   packages = ["lib"]
-  revision = "04d0f183a15d2bdbde9dbd8b6fff0e9504f660f2"
+  revision = "dc9b4ab3e59e84be13d641b51fbc6a8d00382c75"
   version = "0.0.3"
 
 [solve-meta]
