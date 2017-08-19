@@ -32,14 +32,6 @@ func main() {
 		log.Fatal(err.Error())
 	}
 
-	log.Printf(
-		"Starting up with the following config: NATS url: %v, Redis address: %v, Redis pass: %v, Cache time: %v",
-		c.NatsURL,
-		c.RedisAddr,
-		c.RedisPass,
-		c.CacheTime,
-	)
-
 	// Setup NATS
 	nc, err = nats.Connect(c.NatsURL)
 	if err != nil {

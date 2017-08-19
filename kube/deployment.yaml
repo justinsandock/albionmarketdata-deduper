@@ -27,19 +27,15 @@ spec:
             requests:
               cpu: 30m
               memory: 250Mi
-          args:
-            - -n $(NATS_URL)
-            - -r $(REDIS_ADDR)
-            - -p $(REDIS_PASS)
           env:
-            - name: NATS_URL
+            - name: DEDUPER_NATSURL
               valueFrom:
                 secretKeyRef:
                   name: nats
                   key: nats_url
-            - name: REDIS_ADDR
+            - name: DEDUPER_REDISADDR
               value: ad-redis-redis:6379
-            - name: REDIS_PASS
+            - name: DEDUPER_REDISPASS
               valueFrom:
                 secretKeyRef:
                   name: ad-redis-redis
