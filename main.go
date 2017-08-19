@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/go-redis/redis"
 	"github.com/nats-io/go-nats"
@@ -95,5 +98,69 @@ func main() {
 		case msg := <-goldCh:
 			handleGold(msg)
 		}
+	}
+}
+
+func handleGold(msg *nats.Msg) {
+	hash := md5.Sum(msg.Data)
+	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
+
+	if !isDupedMessage(key) {
+		log.Print("Publishing deduped set of gold prices...")
+		nc.Publish("goldprices.deduped", msg.Data)
+	} else {
+		log.Print("Got a duplicated set of gold prices...")
+	}
+}
+
+func handleMarketOrder(msg *nats.Msg) {
+	morders := &lib.MarketUpload{}
+	if err := json.Unmarshal(msg.Data, morders); err != nil {
+		fmt.Printf("%v\n", err)
+	}
+
+	for _, order := range morders.Orders {
+		jb, _ := json.Marshal(order)
+		hash := md5.Sum(jb)
+		key := fmt.Sprintf("%v-%v", msg.Subject, hash)
+
+		if !isDupedMessage(key) {
+			log.Print("Publishing deduped market order...")
+			nc.Publish("marketorders.deduped", jb)
+		} else {
+			log.Print("Got a duplicated market order...")
+		}
+	}
+}
+
+func isDupedMessage(key string) bool {
+	_, err := rc.Get(key).Result()
+	if err == redis.Nil {
+		set(key)
+
+		// It didn't exist so not a duped message
+		return false
+	} else if err != nil {
+		fmt.Printf("Error while getting from Redis: %v", err)
+
+		// There was a problem with Redis and since we cannot verify
+		// if the message is a dupe lets just say it isn't. Better
+		// safe than sorry.
+		return false
+	} else {
+		set(key)
+
+		// There was no problem with Redis and we got a value back.
+		// So it was a dupe.
+		return true
+	}
+}
+
+func set(key string) {
+	cache_time := time.Duration(cacheTime) * time.Second
+
+	_, err := rc.Set(key, 1, cache_time).Result()
+	if err != nil {
+		fmt.Printf("Something wrong seting redis key: %v", err)
 	}
 }
