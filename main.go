@@ -55,6 +55,13 @@ func init() {
 
 func main() {
 	flag.Parse()
+	log.Printf(
+		"Starting up with the following config: NATS url: %v, Redis address: %v, Redis pass: %v, Cache time: %v",
+		natsURL,
+		redisAddr,
+		redisPass,
+		cacheTime,
+	)
 
 	var err error
 
