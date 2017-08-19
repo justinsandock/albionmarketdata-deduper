@@ -82,7 +82,7 @@ func handleGold(msg *nats.Msg) {
 	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
 
 	if !isDupedMessage(key) {
-		nc.Publish("goldprices.deduped", msg.Data)
+		nc.Publish(lib.NatsGoldPricesDeduped, msg.Data)
 	} else {
 	}
 }
@@ -101,7 +101,7 @@ func handleMarketOrder(msg *nats.Msg) {
 		key := fmt.Sprintf("%v-%v", msg.Subject, hash)
 
 		if !isDupedMessage(key) {
-			nc.Publish("marketorders.deduped", jb)
+			nc.Publish(lib.NatsMarketOrdersDeduped, jb)
 		} else {
 		}
 	}
