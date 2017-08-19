@@ -122,8 +122,6 @@ func isDupedMessage(key string) bool {
 		// safe than sorry.
 		return false
 	} else {
-		set(key)
-
 		// There was no problem with Redis and we got a value back.
 		// So it was a dupe.
 		return true
