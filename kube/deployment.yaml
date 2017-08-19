@@ -27,6 +27,10 @@ spec:
             requests:
               cpu: 30m
               memory: 250Mi
+          args:
+            - -n $(NATS_URL)
+            - -r $(REDIS_ADDR)
+            - -p $(REDIS_PASS)
           env:
             - name: NATS_URL
               valueFrom:

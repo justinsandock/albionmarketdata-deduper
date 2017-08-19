@@ -3,40 +3,60 @@ package main
 import (
 	"crypto/md5"
 	"fmt"
-	"os"
 	"runtime"
-
 	"log"
-
-	"strconv"
 	"time"
+	"flag"
 
 	"github.com/go-redis/redis"
 	"github.com/nats-io/go-nats"
-)
-
-const (
-	defaultCacheTime = 500
-	defaultNatsURL   = "nats://localhost:4222"
-	defaultRedisAddr = "localhost:6379"
-	defaultRedisDB   = 0
 )
 
 var (
 	rc        *redis.Client
 	nc        *nats.Conn
 	cacheTime int
+	natsURL   string
+	redisAddr string
+	redisPass string
 )
+
+func init() {
+	flag.StringVar(
+		&natsURL,
+		"n",
+		"nats://localhost:4222",
+		"NATS server to connect to.",
+	)
+
+	flag.StringVar(
+		&redisAddr,
+		"r",
+		"localhost:6379",
+		"Redis server to connect to.",
+	)
+
+
+	flag.StringVar(
+		&redisPass,
+		"p",
+		"",
+		"Redis password to use.",
+	)
+
+	flag.IntVar(
+		&cacheTime,
+		"c",
+		500,
+		"Time in seconds to cache entries for.",
+	)
+
+}
 
 func main() {
 	var err error
 
 	// Setup NATS
-	natsURL := os.Getenv("NATS_URL")
-	if natsURL == "" {
-		natsURL = defaultNatsURL
-	}
-
 	nc, err = nats.Connect(natsURL)
 	if err != nil {
 		log.Fatalf("Unable to connect to nats server: %v", err)
@@ -45,55 +65,64 @@ func main() {
 	defer nc.Close()
 
 	// Setup Redis
-	redisAddr := os.Getenv("REDIS_ADDR")
-	if redisAddr == "" {
-		redisAddr = defaultRedisAddr
-	}
-
 	rc = redis.NewClient(&redis.Options{
 		Addr:     redisAddr,
-		Password: os.Getenv("REDIS_PASS"),
-		DB:       defaultRedisDB,
+		Password: redisPass,
+		DB:       0,
 	})
 
-	// Setup Redis Cache Time
-	ct := os.Getenv("CACHE_TIME")
-	if ct == "" {
-		cacheTime = defaultCacheTime
-	} else {
-		cacheTime, err = strconv.Atoi(ct)
-		if err != nil {
-			log.Fatalf("Error while converting CACHE_TIME to int: %v", err)
+	// Market Orders
+	marketCh := make(chan *nats.Msg, 64)
+	marketSub, err := nc.ChanSubscribe("marketorders.ingest", marketCh)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+	defer marketSub.Unsubscribe()
+
+	// Gold Prices
+	goldCh := make(chan *nats.Msg, 64)
+	goldSub, err := nc.ChanSubscribe("goldprices.ingest", goldCh)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+	defer goldSub.Unsubscribe()
+
+	for {
+		select {
+		case msg := <-marketCh:
+			handleMarketOrder(msg)
+		case msg := <-goldCh:
+			handleGold(msg)
 		}
 	}
 
-	// Market Orders
-	nc.Subscribe("marketorders.raw", func(m *nats.Msg) {
-		hash := md5.Sum(m.Data)
-		key := fmt.Sprintf("%v-%v", m.Subject, hash)
-
-		if !is_duped_message(key) {
-			log.Print("Publishing deduped market order...")
-			nc.Publish("marketorders.deduped", m.Data)
-		} else {
-			log.Print("Got a duplicated market order...")
-		}
-	})
-
-	// Gold Prices
-	nc.Subscribe("goldprices.raw", func(m *nats.Msg) {
-		hash := md5.Sum(m.Data)
-		key := fmt.Sprintf("%v-%v", m.Subject, hash)
-
-		if !is_duped_message(key) {
-			log.Print("Publishing deduped set of gold prices...")
-			nc.Publish("goldprices.deduped", m.Data)
-		} else {
-			log.Print("Got a duplicated set of gold prices...")
-		}
-	})
-
 	runtime.Goexit()
+}
+
+func handleMarketOrder(msg *nats.Msg) {
+	hash := md5.Sum(msg.Data)
+	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
+
+	if !is_duped_message(key) {
+		log.Print("Publishing deduped market order...")
+		nc.Publish("marketorders.deduped", msg.Data)
+	} else {
+		log.Print("Got a duplicated market order...")
+	}
+}
+
+func handleGold(msg *nats.Msg) {
+	hash := md5.Sum(msg.Data)
+	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
+
+	if !is_duped_message(key) {
+		log.Print("Publishing deduped set of gold prices...")
+		nc.Publish("goldprices.deduped", msg.Data)
+	} else {
+		log.Print("Got a duplicated set of gold prices...")
+	}
 }
 
 func is_duped_message(key string) bool {
