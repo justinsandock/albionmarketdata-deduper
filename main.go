@@ -21,12 +21,12 @@ type config struct {
 }
 
 var (
+	c  config
 	rc *redis.Client
 	nc *nats.Conn
 )
 
 func main() {
-	var c config
 	err := envconfig.Process("deduper", &c)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -139,7 +139,7 @@ func isDupedMessage(key string) bool {
 }
 
 func set(key string) {
-	cache_time := time.Duration(cacheTime) * time.Second
+	cache_time := time.Duration(c.CacheTime) * time.Second
 
 	_, err := rc.Set(key, 1, cache_time).Result()
 	if err != nil {
