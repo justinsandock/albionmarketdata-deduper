@@ -2,11 +2,11 @@ package main
 
 import (
 	"crypto/md5"
-	"fmt"
-	"runtime"
-	"log"
-	"time"
 	"flag"
+	"fmt"
+	"log"
+	"runtime"
+	"time"
 
 	"github.com/go-redis/redis"
 	"github.com/nats-io/go-nats"
@@ -35,7 +35,6 @@ func init() {
 		"localhost:6379",
 		"Redis server to connect to.",
 	)
-
 
 	flag.StringVar(
 		&redisPass,
