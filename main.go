@@ -25,28 +25,28 @@ var (
 func init() {
 	flag.StringVar(
 		&natsURL,
-		"n",
+		"natsUrl",
 		"nats://localhost:4222",
 		"NATS server to connect to.",
 	)
 
 	flag.StringVar(
 		&redisAddr,
-		"r",
+		"redisAddr",
 		"localhost:6379",
 		"Redis server to connect to.",
 	)
 
 	flag.StringVar(
 		&redisPass,
-		"p",
+		"redisPass",
 		"",
 		"Redis password to use.",
 	)
 
 	flag.IntVar(
 		&cacheTime,
-		"c",
+		"cacheTime",
 		500,
 		"Time in seconds to cache entries for.",
 	)
