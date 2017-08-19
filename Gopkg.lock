@@ -8,6 +8,12 @@
   version = "v6.5.7"
 
 [[projects]]
+  name = "github.com/kelseyhightower/envconfig"
+  packages = ["."]
+  revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
+  version = "v1.3.0"
+
+[[projects]]
   name = "github.com/nats-io/go-nats"
   packages = [".","encoders/builtin","util"]
   revision = "29f9728a183bf3fa7e809e14edac00b33be72088"
@@ -28,6 +34,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "56918cd18b2054f9a6e9fa1bd64f105548e2837a2e79b9fcd58836c3011501a8"
+  inputs-digest = "3d7af5bd48f367c01a2534b9e8023e65fa2df575f12a013041b426924d2bcaf0"
   solver-name = "gps-cdcl"
   solver-version = 1

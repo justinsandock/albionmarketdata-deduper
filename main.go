@@ -3,70 +3,45 @@ package main
 import (
 	"crypto/md5"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"time"
 
 	"github.com/go-redis/redis"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/nats-io/go-nats"
 	"github.com/regner/albiondata-client/lib"
 )
 
-var (
-	rc        *redis.Client
-	nc        *nats.Conn
-	cacheTime int
-	natsURL   string
-	redisAddr string
-	redisPass string
-)
-
-func init() {
-	flag.StringVar(
-		&natsURL,
-		"natsUrl",
-		"nats://localhost:4222",
-		"NATS server to connect to.",
-	)
-
-	flag.StringVar(
-		&redisAddr,
-		"redisAddr",
-		"localhost:6379",
-		"Redis server to connect to.",
-	)
-
-	flag.StringVar(
-		&redisPass,
-		"redisPass",
-		"",
-		"Redis password to use.",
-	)
-
-	flag.IntVar(
-		&cacheTime,
-		"cacheTime",
-		500,
-		"Time in seconds to cache entries for.",
-	)
-
+type config struct {
+	CacheTime int    `default:"500"`
+	NatsURL   string `default:"nats://localhost:4222"`
+	RedisAddr string `default:"localhost:6379"`
+	RedisPass string `default:""`
 }
 
+var (
+	rc *redis.Client
+	nc *nats.Conn
+)
+
 func main() {
-	flag.Parse()
+	var c config
+	err := envconfig.Process("deduper", &c)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
 	log.Printf(
 		"Starting up with the following config: NATS url: %v, Redis address: %v, Redis pass: %v, Cache time: %v",
-		natsURL,
-		redisAddr,
-		redisPass,
-		cacheTime,
+		c.NatsURL,
+		c.RedisAddr,
+		c.RedisPass,
+		c.CacheTime,
 	)
 
-	var err error
-
 	// Setup NATS
-	nc, err = nats.Connect(natsURL)
+	nc, err = nats.Connect(c.NatsURL)
 	if err != nil {
 		log.Fatalf("Unable to connect to nats server: %v", err)
 	}
@@ -75,8 +50,8 @@ func main() {
 
 	// Setup Redis
 	rc = redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: redisPass,
+		Addr:     c.RedisAddr,
+		Password: c.RedisPass,
 		DB:       0,
 	})
 
