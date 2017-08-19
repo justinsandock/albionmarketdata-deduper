@@ -76,18 +76,20 @@ func main() {
 }
 
 func handleGold(msg *nats.Msg) {
+	log.Print("Processing gold prices message...")
+
 	hash := md5.Sum(msg.Data)
 	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
 
 	if !isDupedMessage(key) {
-		log.Print("Publishing deduped set of gold prices...")
 		nc.Publish("goldprices.deduped", msg.Data)
 	} else {
-		log.Print("Got a duplicated set of gold prices...")
 	}
 }
 
 func handleMarketOrder(msg *nats.Msg) {
+	log.Print("Processing marker order message...")
+
 	morders := &lib.MarketUpload{}
 	if err := json.Unmarshal(msg.Data, morders); err != nil {
 		fmt.Printf("%v\n", err)
@@ -99,10 +101,8 @@ func handleMarketOrder(msg *nats.Msg) {
 		key := fmt.Sprintf("%v-%v", msg.Subject, hash)
 
 		if !isDupedMessage(key) {
-			log.Print("Publishing deduped market order...")
 			nc.Publish("marketorders.deduped", jb)
 		} else {
-			log.Print("Got a duplicated market order...")
 		}
 	}
 }
