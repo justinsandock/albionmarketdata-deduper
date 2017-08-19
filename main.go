@@ -66,11 +66,6 @@ func main() {
 		log.Fatalf("Unable to connect to nats server: %v", err)
 	}
 
-	enc, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
-	if err != nil {
-		log.Fatalf("Unable to establish encoded nats connection: %v", err)
-	}
-
 	defer nc.Close()
 
 	// Setup Redis
@@ -123,7 +118,7 @@ func handleMarketOrder(msg *nats.Msg) {
 
 		if !isDupedMessage(key) {
 			log.Print("Publishing deduped market order...")
-			enc.Publish("marketorders.deduped", jb)
+			nc.Publish("marketorders.deduped", jb)
 		} else {
 			log.Print("Got a duplicated set of gold prices...")
 		}
