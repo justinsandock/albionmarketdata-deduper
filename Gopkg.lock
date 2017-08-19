@@ -19,9 +19,15 @@
   revision = "289cccf02c178dc782430d534e3c1f5b72af807f"
   version = "v1.0.0"
 
+[[projects]]
+  name = "github.com/regner/albiondata-client"
+  packages = ["lib"]
+  revision = "04d0f183a15d2bdbde9dbd8b6fff0e9504f660f2"
+  version = "0.0.3"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "295a0e2b976567acaa3d033c277e8259e7664bf983532a3dee780b05d8a98145"
+  inputs-digest = "56918cd18b2054f9a6e9fa1bd64f105548e2837a2e79b9fcd58836c3011501a8"
   solver-name = "gps-cdcl"
   solver-version = 1

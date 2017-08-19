@@ -10,11 +10,14 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/nats-io/go-nats"
+	"github.com/regner/albiondata-client/lib"
+	"encoding/json"
 )
 
 var (
 	rc        *redis.Client
 	nc        *nats.Conn
+	enc       *nats.EncodedConn
 	cacheTime int
 	natsURL   string
 	redisAddr string
@@ -63,6 +66,11 @@ func main() {
 		log.Fatalf("Unable to connect to nats server: %v", err)
 	}
 
+	enc, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	if err != nil {
+		log.Fatalf("Unable to establish encoded nats connection: %v", err)
+	}
+
 	defer nc.Close()
 
 	// Setup Redis
@@ -103,14 +111,22 @@ func main() {
 }
 
 func handleMarketOrder(msg *nats.Msg) {
-	hash := md5.Sum(msg.Data)
-	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
+	morders := &lib.MarketUpload{}
+	if err := json.Unmarshal(msg.Data, morders); err != nil {
+		fmt.Printf("%v\n", err)
+	}
 
-	if !is_duped_message(key) {
-		log.Print("Publishing deduped market order...")
-		nc.Publish("marketorders.deduped", msg.Data)
-	} else {
-		log.Print("Got a duplicated market order...")
+	for _, order := range morders.Orders {
+		jb, _ := json.Marshal(order)
+		hash := md5.Sum(jb)
+		key := fmt.Sprintf("%v-%v", msg.Subject, hash)
+
+		if !isDupedMessage(key) {
+			log.Print("Publishing deduped market order...")
+			enc.Publish("marketorders.deduped", jb)
+		} else {
+			log.Print("Got a duplicated set of gold prices...")
+		}
 	}
 }
 
@@ -118,7 +134,7 @@ func handleGold(msg *nats.Msg) {
 	hash := md5.Sum(msg.Data)
 	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
 
-	if !is_duped_message(key) {
+	if !isDupedMessage(key) {
 		log.Print("Publishing deduped set of gold prices...")
 		nc.Publish("goldprices.deduped", msg.Data)
 	} else {
@@ -126,7 +142,7 @@ func handleGold(msg *nats.Msg) {
 	}
 }
 
-func is_duped_message(key string) bool {
+func isDupedMessage(key string) bool {
 	_, err := rc.Get(key).Result()
 	if err == redis.Nil {
 		set(key)
