@@ -25,7 +25,7 @@ func init() {
 	flag.StringVar(
 		&natsURL,
 		"n",
-		"nats://localhost:4222",
+		"nats://ingest.albion-data.com:4222",
 		"NATS server to connect to.",
 	)
 
@@ -53,6 +53,8 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
+
 	var err error
 
 	// Setup NATS
