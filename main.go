@@ -65,12 +65,23 @@ func main() {
 	}
 	defer goldSub.Unsubscribe()
 
+	// Map Data
+	mapCh := make(chan *nats.Msg, 64)
+	mapSub, err := nc.ChanSubscribe(lib.NatsMapDataIngest, mapCh)
+	if err != nil {
+		fmt.Printf("%v\n", err)
+		return
+	}
+	defer mapSub.Unsubscribe()
+
 	for {
 		select {
 		case msg := <-marketCh:
 			handleMarketOrder(msg)
 		case msg := <-goldCh:
 			handleGold(msg)
+		case msg := <-mapCh:
+			handleMapData(msg)
 		}
 	}
 }
@@ -83,12 +94,22 @@ func handleGold(msg *nats.Msg) {
 
 	if !isDupedMessage(key) {
 		nc.Publish(lib.NatsGoldPricesDeduped, msg.Data)
-	} else {
+	}
+}
+
+func handleMapData(msg *nats.Msg) {
+	log.Print("Processing map data message...")
+
+	hash := md5.Sum(msg.Data)
+	key := fmt.Sprintf("%v-%v", msg.Subject, hash)
+
+	if !isDupedMessage(key) {
+		nc.Publish(lib.NatsMapDataDeduped, msg.Data)
 	}
 }
 
 func handleMarketOrder(msg *nats.Msg) {
-	log.Print("Processing marker order message...")
+	log.Print("Processing market order message...")
 
 	morders := &lib.MarketUpload{}
 	if err := json.Unmarshal(msg.Data, morders); err != nil {
@@ -102,7 +123,6 @@ func handleMarketOrder(msg *nats.Msg) {
 
 		if !isDupedMessage(key) {
 			nc.Publish(lib.NatsMarketOrdersDeduped, jb)
-		} else {
 		}
 	}
 }

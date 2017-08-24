@@ -28,8 +28,8 @@
 [[projects]]
   name = "github.com/regner/albiondata-client"
   packages = ["lib"]
-  revision = "dc9b4ab3e59e84be13d641b51fbc6a8d00382c75"
-  version = "0.0.3"
+  revision = "f14dcac236761b8ab992d3c6ec8585be382afe34"
+  version = "0.0.9"
 
 [solve-meta]
   analyzer-name = "dep"
